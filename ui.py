@@ -14,6 +14,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 import serial
 import numpy as np
 
+NUMBER_GRAPHS = 3
 # PORT_NAME = "COM1"
 # BAUD_RATE = "9600"
 
@@ -36,25 +37,35 @@ class Ui_MainWindow(object):
         self.centralwidget.setSizePolicy(sizePolicy)
         self.centralwidget.setObjectName("centralwidget")
 
-        #
+        # Horizontal Layout
         self.horizontalLayout = QtWidgets.QHBoxLayout(self.centralwidget)
         self.horizontalLayout.setObjectName("horizontalLayout")
+
+        # Main Layout 
         self.vertical_main = QtWidgets.QHBoxLayout()
         self.vertical_main.setSizeConstraint(QtWidgets.QLayout.SetNoConstraint)
         self.vertical_main.setObjectName("vertical_main")
+
+        # Raw Data Layout
         self.raw_data_layout = QtWidgets.QVBoxLayout()
         self.raw_data_layout.setObjectName("raw_data_layout")
+
+        # Data Label Frame
         self.data_label_frame = QtWidgets.QFrame(self.centralwidget)
         self.data_label_frame.setMaximumSize(QtCore.QSize(16777215, 75))
         self.data_label_frame.setFrameShape(QtWidgets.QFrame.StyledPanel)
         self.data_label_frame.setFrameShadow(QtWidgets.QFrame.Raised)
         self.data_label_frame.setObjectName("data_label_frame")
+
+        # Vertical Layout for Raw Data
         self.verticalLayout_3 = QtWidgets.QVBoxLayout(self.data_label_frame)
         self.verticalLayout_3.setObjectName("verticalLayout_3")
         self.raw_data_label = QtWidgets.QLabel(self.data_label_frame)
         font = QtGui.QFont()
         font.setPointSize(18)
         font.setKerning(True)
+
+        # Raw Data Label
         self.raw_data_label.setFont(font)
         self.raw_data_label.setAlignment(QtCore.Qt.AlignCenter)
         self.raw_data_label.setObjectName("raw_data_label")
@@ -62,6 +73,8 @@ class Ui_MainWindow(object):
         self.raw_data_layout.addWidget(self.data_label_frame)
         self.verticalLayout_5 = QtWidgets.QVBoxLayout()
         self.verticalLayout_5.setObjectName("verticalLayout_5")
+        
+        # Raw Data Text Browser
         self.textBrowser = QtWidgets.QTextBrowser(self.centralwidget)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
@@ -71,6 +84,8 @@ class Ui_MainWindow(object):
         self.textBrowser.setMinimumSize(QtCore.QSize(100, 100))
         self.textBrowser.setMaximumSize(QtCore.QSize(1000, 1000))
         self.textBrowser.setObjectName("textBrowser")
+
+
         self.verticalLayout_5.addWidget(self.textBrowser)
         self.raw_data_layout.addLayout(self.verticalLayout_5)
         self.vertical_main.addLayout(self.raw_data_layout)
@@ -212,6 +227,8 @@ class Ui_MainWindow(object):
         self.menuBruh.setTitle(_translate("MainWindow", "Bruh"))
 
 
+
+# Creates A graph for the layout 
 def createGraph(name):
     sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
     sizePolicy.setHorizontalStretch(0)
@@ -224,59 +241,79 @@ def createGraph(name):
     p.setObjectName(name)
     return p
 
-
+# Rotates an array to the left
+# and adds new value at the end
+# of array
 def rotateLeft(arr, newVal):
     if (np.size(arr) < 2):
         raise NameError("Size of Array Less than 2")
     for i in range(np.size(arr)-1):
         arr[i] = arr[i+1]
     arr[-1] = newVal
-    return arr
 
 
-i = 0
+# NEED ARRAY AS I
+i = [0,0,0]
 
-def updateArr(arr, newVar):
+# Updates the array, depending
+# if the array is filled it will
+# either rotate the array or 
+# just put the new variable at
+# index i.
+def updateArr(arr, newVar, j):
     global i,timeArr
     np.size(arr)
-    if i > np.size(timeArr)-1:
-        return rotateLeft(arr, newVar)
+    if i[j] > np.size(timeArr)-1:
+        return rotateLeft(arr, newVar,)
     else:
-        arr[i] = newVar
-        i += 1
-    return arr
+        arr[i[j]] = newVar
+        # THIS NEEDS TO BE CHANGED
+        i[j] += 1
 
-infoArr = np.array([0,0,0,0,0,0,0,0,0])
-timeArr = np.array([1,2,3,4,5,6,7,8,9])
-
-
+timeArr = np.arange(0, 50, 1)
+infoArr = np.zeros((3,50))
 
 
 def update(ui):
     global ptr, timeArr, infoArr, i
     f = open("testFile", "r")
-    p = ui.graph_section.itemAt(0).widget()
-    plot = p.plot(timeArr, infoArr)
+    plots = []
+    for graphs in range(NUMBER_GRAPHS):
+        p = ui.graph_section.itemAt(graphs).widget()
+        plots.append(p.plot(timeArr, infoArr[graphs]))
+
     for x in f:
-        time.sleep(.1)
+        time.sleep(.2)
         txt = x.split()
-        # print(infoArr)
         ui.textBrowser.append(x)
-        infoArr = updateArr(infoArr, int(txt[0]))
-        timeArr = rotateLeft(timeArr, timeArr[-1] + 1)
-        plot.setData(timeArr, infoArr)
+
+        for j in range(NUMBER_GRAPHS):
+            plots[j].setData(timeArr, infoArr[j])
+            # ui.current_val_layout.itemAt(0).widget().setText("Value 1: " + txt[0])
+            ui.current_val_layout.itemAt(0).widget().children()
+            arr = infoArr[j]
+            updateArr(arr, int(txt[j]), j)
+
+        rotateLeft(timeArr, timeArr[-1] + 1)
+
         QtGui.QGuiApplication.processEvents()
         
 
     
 def secondStart(ui):
-    p1 = createGraph("graph_1")
-    p2 = createGraph("graph_2")
-    p3 = createGraph("graph_3")
 
-    ui.graph_section.addWidget(p1)
-    ui.graph_section.addWidget(p2)
-    ui.graph_section.addWidget(p3)
+    for i in range(NUMBER_GRAPHS):
+        p1 = createGraph("graph_" + str(i))
+        p1.setLabel('left', 'Data')
+        p1.setLabel('bottom', 'Time')
+        ui.graph_section.addWidget(p1)
+    
+    # p2 = createGraph("graph_2")
+    # p3 = createGraph("graph_3")
+
+
+    # ui.graph_section.addWidget(p2)
+    # ui.graph_section.addWidget(p3)
 
 if __name__ == "__main__":
     import sys
